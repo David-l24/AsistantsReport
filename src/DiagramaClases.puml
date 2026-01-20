@@ -10,25 +10,26 @@ package "Dominio" {
     -duracionSemestres : int
     -estado : EstadoProyecto
     -numeroAyudantesPlanificados : int
-    +cambiarEstado(nuevoEstado : EstadoProyecto) : void
+    +cambiarEstado(nuevoEstado: EstadoProyecto) : void
     +esAprobado() : boolean
     +tieneAyudantesPlanificados() : boolean
   }
 
-  enum EstadoProyecto {
+ enum EstadoProyecto {
     RECIBIDO
     EN_REVISION
     APROBADO
     NO_APROBADO
   }
 
-  class Director {
+ class Director {
     -identificacion : String
     -nombres : String
     -apellidos : String
-    -correoInstitucional : String
-    +registrarSeguimiento() : void
-    +cerrarSeguimiento() : void
+    -correo : String
+    +generarReporteAyudantes() : void
+    +registrarReporte() : void
+    +cerrarReporte() : void
   }
 
   class JefaturaDICC {
@@ -41,10 +42,10 @@ package "Dominio" {
     +consultarTrazabilidad() : void
   }
 
-  class ReporteAyudante {
+  class ReporteAyudantes {
     -id : String
     -periodoAcademico : String
-    -estado : EstadoSeguimiento
+    -estado : EstadoReporte
     -fechaCreacion : Date
     -fechaCierre : Date
     +agregarParticipacion() : boolean
@@ -52,7 +53,7 @@ package "Dominio" {
     +estaCompleto() : boolean
   }
 
-  enum EstadoSeguimiento {
+  enum EstadoReporte {
     SIN_REGISTRO
     EN_EDICION
     CERRADO
@@ -63,13 +64,13 @@ package "Dominio" {
     -nombres : String
     -apellidos : String
     -correoElectronico : String
-    -rol : String
     -carrera : String
-    -nivelAcademico : String
+    -semestre : int
   }
 
-  class Ayudantía {
+  class Ayudantia {
     -fechaInicio : Date
+    -fechaFin : Date
     -fechaRetiro : Date
     -motivoRetiro : String
     -estado : EstadoParticipacion
@@ -77,9 +78,10 @@ package "Dominio" {
     +registrarRetiro() : void
   }
 
-  enum EstadoParticipacion {
+  enum EstadoAyudantia {
     ACTIVO
     RETIRADO
+    INACTIVO
   }
 
   class PeriodoAcademico {
@@ -92,7 +94,7 @@ package "Dominio" {
     +diasRestantes() : int
   }
 
-  class ResumenSeguimiento {
+  class ResumenReporte {
     -cantidadPlanificada : int
     -cantidadRegistrada : int
     -cantidadActivos : int
@@ -108,9 +110,10 @@ package "Dominio" {
     -fechaEnvio : Date
     -contenido : String
     -estado : String
+    +notificar(): void
   }
 
-  class AuditoriaSeguimiento {
+  class AuditoriaReporte {
     -tipoOperacion : String
     -usuarioEjecutor : String
     -fechaHora : Date
@@ -121,19 +124,10 @@ package "Dominio" {
 
 package "Servicios de Dominio" {
 
-  interface IEvaluadorCumplimiento {
-    +evaluar(seguimiento : ReporteAyudante) : ResumenSeguimiento
+  class EvaluadorCumplimientoAyudantia {
+    +evaluar(reporte : ReporteAyudantes) : ResumenReporte
   }
 
-  class EvaluadorCumplimientoAyudantía {
-    +evaluar(seguimiento : ReporteAyudante) : ResumenSeguimiento
-  }
-
-  interface IGestorNotificaciones {
-    +programarRecordatorios(periodo : PeriodoAcademico) : void
-    +notificarDirectoresPendientes() : void
-    +notificarCumplimientoTotal() : void
-  }
 
   class GestorNotificacionesEmail {
     +programarRecordatorios(periodo : PeriodoAcademico) : void
@@ -141,19 +135,13 @@ package "Servicios de Dominio" {
     +notificarCumplimientoTotal() : void
   }
 
-  interface IGeneradorReportes {
-    +generarReporteTrazabilidad(proyecto : Proyecto) : Reporte
-    +generarReporteParticipacion(periodo : PeriodoAcademico) : Reporte
-  }
 
   class GeneradorReportesPDF {
     +generarReporteTrazabilidad(proyecto : Proyecto) : Reporte
     +generarReporteParticipacion(periodo : PeriodoAcademico) : Reporte
   }
 
-  IEvaluadorCumplimiento <|.. EvaluadorCumplimientoAyudantía
-  IGestorNotificaciones <|.. GestorNotificacionesEmail
-  IGeneradorReportes <|.. GeneradorReportesPDF
+
 }
 
 ' =====================
@@ -161,16 +149,16 @@ package "Servicios de Dominio" {
 ' =====================
 
 Proyecto "1" --> "1" Director : dirigidoPor
-Proyecto "1" --> "0..*" ReporteAyudante : tiene
+Proyecto "1" --> "0..*" ReporteAyudantes : tiene
 Proyecto --> EstadoProyecto
 
-ReporteAyudante "1" *-- "1..*" Ayudantía : contiene
-ReporteAyudante "1" --> "1" PeriodoAcademico : correspondeA
-ReporteAyudante --> EstadoSeguimiento
+ReporteAyudantes "1" *-- "1..*" Ayudantia : contiene
+ReporteAyudantes "1" --> "1" PeriodoAcademico : correspondeA
+ReporteAyudantes --> EstadoReporte
 
-Ayudantía "1" --> "1" Ayudante : referencia
-Ayudantía --> EstadoParticipacion
-Ayudantía "1" --> "0..*" AuditoriaSeguimiento : genera
+Ayudantia "1" --> "1" Ayudante : referencia
+Ayudantia --> EstadoParticipacion
+Ayudantia "1" --> "0..*" AuditoriaReporte : genera
 
 
 Notificacion "0..*" --> "1" Director : notificaA
@@ -180,7 +168,7 @@ Notificacion "0..*" --> "1" JefaturaDICC : notificaA
 JefaturaDICC "1" --> "0..*" PeriodoAcademico : configura
 
 Director --> Ayudante : registra
-Director --> Ayudantía : crea
+Director --> Ayudantia : crea
 Director --> ReporteAyudante : gestiona
 
 JefaturaDICC --> Proyecto : registra
@@ -189,8 +177,8 @@ JefaturaDICC --> Proyecto : registra
 ' RELACIONES DE SERVICIOS
 ' =====================
 
-EvaluadorCumplimientoAyudantía --> ReporteAyudante : evalúa
-EvaluadorCumplimientoAyudantía --> ResumenSeguimiento : genera
+EvaluadorCumplimientoAyudantia --> ReporteAyudante : evalúa
+EvaluadorCumplimientoAyudantia --> ResumenReporte : genera
 
 GestorNotificacionesEmail --> Notificacion : crea
 GestorNotificacionesEmail --> Director : notifica
@@ -198,6 +186,6 @@ GestorNotificacionesEmail --> PeriodoAcademico : consulta
 
 GeneradorReportesPDF --> Proyecto : consulta
 GeneradorReportesPDF --> ReporteAyudante : consulta
-GeneradorReportesPDF --> Ayudantía : consulta
+GeneradorReportesPDF --> Ayudantia : consulta
 
 @enduml
